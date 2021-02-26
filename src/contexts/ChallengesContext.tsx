@@ -1,4 +1,4 @@
-import { createContext, useState, ReactNode, useContext } from 'react';
+import { createContext, useState, ReactNode, useContext, useEffect } from 'react';
 import challenges from '../../challenges.json';
 
 interface Challeges {
@@ -16,6 +16,7 @@ interface ChallehgesContextData {
   activeChallenges: Challeges;
   reseteChallengs: () => void;
   experienceNextLevel: number;
+  compltedChallengs: () => void;
 }
 
 interface ChallehgesProviderProps {
@@ -31,7 +32,11 @@ export default function ChallehgesProvider({ children }: ChallehgesProviderProps
   const [challengesCopleted, setChallengesCopleted] = useState(0);
   const [activeChallenges, setActiveChallenges] = useState(null);
 
-  const experienceNextLevel = Math.pow((level + 1) * 4, 2)
+  const experienceNextLevel = Math.pow((level + 1) * 4, 2);
+
+  useEffect(() => {
+    Notification.requestPermission();
+  }, [])
 
   function levelUp() {
     setLevel(level + 1);
@@ -41,10 +46,33 @@ export default function ChallehgesProvider({ children }: ChallehgesProviderProps
     const randomChallengeIndex = Math.floor(Math.random() * challenges.length);
     const challenge = challenges[randomChallengeIndex];
     setActiveChallenges(challenge);
+
+    new Audio('/notification.mp3').play();
+
+    if (Notification.permission === 'granted') {
+      new Notification('Novo desafio :)', {
+        body: `Valendo xp`
+      });
+    }
   }
 
   function reseteChallengs() {
     setActiveChallenges(null);
+  }
+
+  function compltedChallengs() {
+    if (!activeChallenges) {
+      return;
+    }
+    const { amount } = activeChallenges;
+    let finalExperience = currentExperience + amount;
+    if (finalExperience >= experienceNextLevel) {
+      finalExperience = finalExperience - experienceNextLevel;
+      levelUp();
+    }
+    setCurrentExperience(finalExperience);
+    setActiveChallenges(null);
+    setChallengesCopleted(challengesCopleted + 1);
   }
 
   return (
@@ -57,7 +85,8 @@ export default function ChallehgesProvider({ children }: ChallehgesProviderProps
         startNewChallenges,
         activeChallenges,
         reseteChallengs,
-        experienceNextLevel
+        experienceNextLevel,
+        compltedChallengs
       }}>
       {children}
     </ChallengesContext.Provider>
